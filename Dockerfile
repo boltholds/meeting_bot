@@ -28,7 +28,8 @@ RUN pip install --no-cache-dir . \
     && chown -R appuser:appuser /app /data /tmp/runtime-appuser
 
 COPY docker-entrypoint.sh /usr/local/bin/meeting-bot-entrypoint
-RUN chmod +x /usr/local/bin/meeting-bot-entrypoint \
+RUN sed -i 's/\r$//' /usr/local/bin/meeting-bot-entrypoint \
+    && chmod +x /usr/local/bin/meeting-bot-entrypoint \
     && test -x /usr/local/bin/meeting-bot-entrypoint \
     && /bin/sh -n /usr/local/bin/meeting-bot-entrypoint
 
