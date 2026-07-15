@@ -45,6 +45,10 @@ uv run meeting-bot-auth-google --output auth/google.json --channel chrome
 Complete the interactive Google login in the opened browser. Then set this in
 `.env` and recreate the container:
 
+The command starts a regular installed Chrome with a separate profile and only
+attaches through the local DevTools port after you confirm that login is done.
+This avoids Google's rejection of sign-in from a Playwright-launched browser.
+
 ```env
 GOOGLE_STORAGE_STATE=/auth/google.json
 ```
