@@ -109,3 +109,23 @@ async def test_yandex_telemost_chat_notice_reports_missing_button() -> None:
 
     with pytest.raises(RuntimeError, match="chat button was not found"):
         await adapter.send_chat_notice("Recording notice")
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_fills_messenger_iframe() -> None:
+    field = SimpleNamespace(
+        is_visible=AsyncMock(return_value=True),
+        fill=AsyncMock(),
+    )
+    frame = SimpleNamespace(
+        parent_frame=object(),
+        url="https://yandex.ru/chat/iframe/meeting",
+        locator=lambda _selector: SimpleNamespace(first=field),
+    )
+    page = SimpleNamespace(frames=[frame])
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+
+    filled = await adapter._fill_messenger_frame([], "Recording notice")
+
+    assert filled is True
+    field.fill.assert_awaited_once_with("Recording notice")

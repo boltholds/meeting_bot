@@ -82,6 +82,7 @@ class YandexTelemostAdapter(MeetingPageAdapter):
     async def send_chat_notice(self, message: str) -> bool:
         opened = await self._retry_click(
             [
+                'button[data-testid="chat-alt-button"]',
                 'button[data-testid*="chat" i]',
                 'button[aria-label*="чат" i]',
                 'button[aria-label*="chat" i]',
@@ -244,7 +245,45 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         while asyncio.get_running_loop().time() < deadline:
             if await self._fill_first(selectors, value):
                 return True
+            if await self._fill_messenger_frame(selectors, value):
+                return True
             await asyncio.sleep(0.5)
+        return False
+
+    async def _fill_messenger_frame(self, selectors: list[str], value: str) -> bool:
+        # Telemost embeds meeting chat as a cross-origin Yandex Messenger
+        # iframe. Playwright can access it through Frame locators, but normal
+        # page.locator calls do not cross the frame boundary.
+        frame_selectors = [
+            *selectors,
+            "textarea",
+            '[contenteditable="true"]',
+            'input[type="text"]',
+        ]
+        for frame in self.page.frames:
+            if frame.parent_frame is None:
+                continue
+
+            frame_url = (frame.url or "").lower()
+            is_messenger = "messenger" in frame_url or "/chat" in frame_url
+            if not is_messenger:
+                try:
+                    frame_element = await frame.frame_element()
+                    marker = await frame_element.get_attribute("data-messenger-iframe")
+                    is_messenger = marker is not None
+                except Exception:
+                    pass
+            if not is_messenger:
+                continue
+
+            for selector in frame_selectors:
+                locator = frame.locator(selector).first
+                try:
+                    if await locator.is_visible(timeout=500):
+                        await locator.fill(value)
+                        return True
+                except Exception:
+                    continue
         return False
 
     async def _page_summary(self) -> str:
