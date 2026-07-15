@@ -69,6 +69,12 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             failure = await self._visible_failure()
             if failure:
                 raise RuntimeError(f"Yandex Telemost admission failed: {failure}")
+            # Telemost changes its in-call toolbar labels frequently. The
+            # stable transition is removal of the pre-join button after the
+            # accepted click. This also covers guest calls that have no lobby.
+            if not await self._prejoin_visible():
+                await self._dismiss_tips()
+                return
             await asyncio.sleep(1)
 
         raise TimeoutError("Timed out waiting for Yandex Telemost admission.")
@@ -114,7 +120,11 @@ class YandexTelemostAdapter(MeetingPageAdapter):
     async def is_meeting_active(self) -> bool:
         if self.page.is_closed():
             return False
-        return await self._in_call_controls_visible()
+        if await self._visible_failure():
+            return False
+        if await self._in_call_controls_visible():
+            return True
+        return not await self._prejoin_visible()
 
     async def _disable_media(self) -> None:
         # With browser permissions denied these buttons normally say "turn on"
@@ -179,11 +189,22 @@ class YandexTelemostAdapter(MeetingPageAdapter):
                 continue
         return False
 
+    async def _prejoin_visible(self) -> bool:
+        locator = self.page.locator(
+            'button[data-testid="enter-conference-button"]'
+        ).first
+        try:
+            return await locator.is_visible(timeout=500)
+        except Exception:
+            return False
+
     async def _visible_failure(self) -> str | None:
         locator = self.page.locator(
             "text=/видеовстреча не найдена|встреча завершена|"
-            "ссылка недействительна|доступ запрещен|доступ запрещён|"
-            "meeting not found|meeting has ended|invalid link|access denied/i"
+            "звонок завершен|звонок завершён|вы покинули встречу|"
+            "встреча закончилась|ссылка недействительна|"
+            "доступ запрещен|доступ запрещён|meeting not found|"
+            "meeting has ended|call ended|you left|invalid link|access denied/i"
         ).first
         try:
             if await locator.is_visible(timeout=300):

@@ -17,7 +17,8 @@ async def test_yandex_telemost_guest_join_uses_browser_prejoin() -> None:
     adapter._fill_first = AsyncMock(return_value=True)
     adapter._disable_media = AsyncMock()
     adapter._retry_join = AsyncMock(return_value=True)
-    adapter._in_call_controls_visible = AsyncMock(return_value=True)
+    adapter._in_call_controls_visible = AsyncMock(return_value=False)
+    adapter._prejoin_visible = AsyncMock(return_value=False)
     adapter._dismiss_tips = AsyncMock()
 
     await adapter.join(
@@ -33,6 +34,26 @@ async def test_yandex_telemost_guest_join_uses_browser_prejoin() -> None:
     adapter._disable_media.assert_awaited_once()
     adapter._retry_join.assert_awaited_once()
     adapter._dismiss_tips.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_stays_active_without_known_toolbar_label() -> None:
+    page = SimpleNamespace(is_closed=lambda: False)
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+    adapter._visible_failure = AsyncMock(return_value=None)
+    adapter._in_call_controls_visible = AsyncMock(return_value=False)
+    adapter._prejoin_visible = AsyncMock(return_value=False)
+
+    assert await adapter.is_meeting_active() is True
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_stops_when_end_screen_appears() -> None:
+    page = SimpleNamespace(is_closed=lambda: False)
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+    adapter._visible_failure = AsyncMock(return_value="Звонок завершён")
+
+    assert await adapter.is_meeting_active() is False
 
 
 @pytest.mark.asyncio
