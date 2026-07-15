@@ -99,7 +99,7 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             '[contenteditable="true"][role="textbox"]',
         ]
         filled = await self._open_chat_and_fill(
-            chat_selectors, field_selectors, message, timeout_seconds=20
+            chat_selectors, field_selectors, message, timeout_seconds=45
         )
         if not filled:
             summary = await self._page_summary()
@@ -131,15 +131,16 @@ class YandexTelemostAdapter(MeetingPageAdapter):
                 continue
 
             # Telemost mounts the Messenger editor only after the visible Chat
-            # button is pressed. Do not click again while the panel is opening:
-            # another click would toggle it closed.
-            field_deadline = min(deadline, asyncio.get_running_loop().time() + 4)
-            while asyncio.get_running_loop().time() < field_deadline:
+            # button is pressed. The cross-origin widget can take several
+            # seconds to initialize in Docker. Never click the toggle again:
+            # that would close the panel while its editor is still loading.
+            while asyncio.get_running_loop().time() < deadline:
                 if await self._fill_first(field_selectors, message):
                     return True
                 if await self._fill_messenger_frame(field_selectors, message):
                     return True
                 await asyncio.sleep(0.5)
+            return False
         return False
 
     async def _click_visible_chat(self, selectors: list[str]) -> bool:
