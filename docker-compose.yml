@@ -1,0 +1,15 @@
+services:
+  meeting-bot:
+    build: .
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - meeting-audio:/data
+    shm_size: 2gb
+    init: true
+    restart: unless-stopped
+
+volumes:
+  meeting-audio:
+
