@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import suppress
+from pathlib import Path
 
 from meeting_bot.audio import AudioRecorder
-from meeting_bot.models import MeetingSession, MeetingStatus
+from meeting_bot.models import MeetingProvider, MeetingSession, MeetingStatus
 from meeting_bot.providers.factory import create_provider_adapter
 from meeting_bot.settings import Settings
 from meeting_bot.store import InMemoryMeetingStore
@@ -86,11 +87,25 @@ class MeetingOrchestrator:
                             "--no-sandbox",
                         ],
                     )
-                    context = await browser.new_context(
-                        permissions=[],
-                        locale="en-US",
-                        viewport={"width": 1280, "height": 720},
-                    )
+                    context_options: dict[str, object] = {
+                        "permissions": [],
+                        "locale": "en-US",
+                        "viewport": {"width": 1280, "height": 720},
+                    }
+                    if (
+                        session.provider is MeetingProvider.GOOGLE_MEET
+                        and self.settings.google_storage_state
+                    ):
+                        storage_state = Path(self.settings.google_storage_state)
+                        if not storage_state.is_file():
+                            raise RuntimeError(
+                                "Google auth state was not found at "
+                                f"{storage_state}. Run meeting-bot-auth-google "
+                                "and mount the generated file into the container."
+                            )
+                        context_options["storage_state"] = str(storage_state)
+
+                    context = await browser.new_context(**context_options)
                     page = await context.new_page()
                     adapter = create_provider_adapter(
                         session.provider, page, bot_name=session.bot_name

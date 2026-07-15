@@ -18,6 +18,9 @@ dev = [
     "pytest-asyncio>=0.25,<2.0",
 ]
 
+[project.scripts]
+meeting-bot-auth-google = "meeting_bot.google_auth:main"
+
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
@@ -29,4 +32,3 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-

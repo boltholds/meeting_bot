@@ -6,10 +6,10 @@ services:
       - "8080:8080"
     volumes:
       - meeting-audio:/data
+      - ./auth:/auth:ro
     shm_size: 2gb
     init: true
     restart: unless-stopped
 
 volumes:
   meeting-audio:
-

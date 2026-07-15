@@ -29,6 +29,33 @@ platforms change their UI and can show account-specific consent screens.
 docker compose up --build
 ```
 
+### Google bot account
+
+Google Meet can reject anonymous third-party bots before they can ask to join.
+For reliable access, use a dedicated Google account for the bot and invite that
+account to the Calendar event.
+
+Create its Playwright auth state once on the host machine:
+
+```bash
+uv sync
+uv run meeting-bot-auth-google --output auth/google.json --channel chrome
+```
+
+Complete the interactive Google login in the opened browser. Then set this in
+`.env` and recreate the container:
+
+```env
+GOOGLE_STORAGE_STATE=/auth/google.json
+```
+
+```bash
+docker compose up --build --force-recreate
+```
+
+The `auth` directory is excluded from Git and the Docker build context. Treat
+`auth/google.json` as a password: never commit or share it.
+
 Create a bot:
 
 ```bash

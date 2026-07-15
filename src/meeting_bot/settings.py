@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     super_transcriber_url: str = "http://localhost:8000"
     super_transcriber_api_key: str = ""
+    google_storage_state: str = ""
     transcription_language: str = "ru"
     transcription_analyze: bool = True
     transcription_min_speakers: int | None = Field(default=1, ge=1, le=50)
