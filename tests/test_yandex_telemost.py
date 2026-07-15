@@ -91,24 +91,41 @@ async def test_yandex_telemost_chat_notice_waits_for_controls() -> None:
         wait_for_timeout=AsyncMock(),
     )
     adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
-    adapter._retry_click = AsyncMock(return_value=True)
-    adapter._retry_fill = AsyncMock(return_value=True)
+    adapter._open_chat_and_fill = AsyncMock(return_value=True)
 
     sent = await adapter.send_chat_notice("Recording notice")
 
     assert sent is True
     page.keyboard.press.assert_awaited_once_with("Enter")
-    adapter._retry_fill.assert_awaited_once()
+    adapter._open_chat_and_fill.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_yandex_telemost_chat_notice_reports_missing_button() -> None:
+async def test_yandex_telemost_chat_notice_reports_missing_field() -> None:
     adapter = YandexTelemostAdapter(SimpleNamespace(), bot_name="Recording bot")
-    adapter._retry_click = AsyncMock(return_value=False)
+    adapter._open_chat_and_fill = AsyncMock(return_value=False)
     adapter._page_summary = AsyncMock(return_value="visible_text='Chat unavailable'")
 
-    with pytest.raises(RuntimeError, match="chat button was not found"):
+    with pytest.raises(RuntimeError, match="chat message field was not found"):
         await adapter.send_chat_notice("Recording notice")
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_waits_for_editor_after_opening_chat() -> None:
+    adapter = YandexTelemostAdapter(SimpleNamespace(), bot_name="Recording bot")
+    adapter._fill_first = AsyncMock(side_effect=[False, False, True])
+    adapter._fill_messenger_frame = AsyncMock(return_value=False)
+    adapter._click_first = AsyncMock(return_value=True)
+
+    filled = await adapter._open_chat_and_fill(
+        ['button:has-text("Чат")'],
+        ['[contenteditable="true"]'],
+        "Recording notice",
+        timeout_seconds=2,
+    )
+
+    assert filled is True
+    adapter._click_first.assert_awaited_once()
 
 
 @pytest.mark.asyncio

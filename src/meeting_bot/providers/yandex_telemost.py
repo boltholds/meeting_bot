@@ -80,33 +80,24 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         raise TimeoutError("Timed out waiting for Yandex Telemost admission.")
 
     async def send_chat_notice(self, message: str) -> bool:
-        opened = await self._retry_click(
-            [
-                'button[data-testid="chat-alt-button"]',
-                'button[data-testid*="chat" i]',
-                'button[aria-label*="чат" i]',
-                'button[aria-label*="chat" i]',
-                'button:has-text("Чат")',
-                'button:has-text("Chat")',
-            ],
-            timeout_seconds=12,
-        )
-        if not opened:
-            summary = await self._page_summary()
-            raise RuntimeError(f"Yandex Telemost chat button was not found. {summary}")
-
-        filled = await self._retry_fill(
-            [
-                'textarea[data-testid*="message" i]',
-                'textarea[placeholder*="сообщение" i]',
-                'textarea[placeholder*="message" i]',
-                '[contenteditable="true"][data-testid*="message" i]',
-                '[contenteditable="true"][aria-label*="сообщение" i]',
-                '[contenteditable="true"][aria-label*="message" i]',
-                '[contenteditable="true"][role="textbox"]',
-            ],
-            message,
-            timeout_seconds=12,
+        chat_selectors = [
+            'button:has-text("Чат")',
+            'button:has-text("Chat")',
+            'button[aria-label="Открыть чат"]',
+            'button[aria-label="Open chat"]',
+            'button[data-testid="chat-alt-button"]',
+        ]
+        field_selectors = [
+            'textarea[data-testid*="message" i]',
+            'textarea[placeholder*="сообщение" i]',
+            'textarea[placeholder*="message" i]',
+            '[contenteditable="true"][data-testid*="message" i]',
+            '[contenteditable="true"][aria-label*="сообщение" i]',
+            '[contenteditable="true"][aria-label*="message" i]',
+            '[contenteditable="true"][role="textbox"]',
+        ]
+        filled = await self._open_chat_and_fill(
+            chat_selectors, field_selectors, message, timeout_seconds=20
         )
         if not filled:
             summary = await self._page_summary()
@@ -117,6 +108,37 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         await self.page.keyboard.press("Enter")
         await self.page.wait_for_timeout(500)
         return True
+
+    async def _open_chat_and_fill(
+        self,
+        chat_selectors: list[str],
+        field_selectors: list[str],
+        message: str,
+        *,
+        timeout_seconds: int,
+    ) -> bool:
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while asyncio.get_running_loop().time() < deadline:
+            if await self._fill_first(field_selectors, message):
+                return True
+            if await self._fill_messenger_frame(field_selectors, message):
+                return True
+
+            if not await self._click_first(chat_selectors):
+                await asyncio.sleep(0.5)
+                continue
+
+            # Telemost mounts the Messenger editor only after the visible Chat
+            # button is pressed. Do not click again while the panel is opening:
+            # another click would toggle it closed.
+            field_deadline = min(deadline, asyncio.get_running_loop().time() + 4)
+            while asyncio.get_running_loop().time() < field_deadline:
+                if await self._fill_first(field_selectors, message):
+                    return True
+                if await self._fill_messenger_frame(field_selectors, message):
+                    return True
+                await asyncio.sleep(0.5)
+        return False
 
     async def is_meeting_active(self) -> bool:
         if self.page.is_closed():
