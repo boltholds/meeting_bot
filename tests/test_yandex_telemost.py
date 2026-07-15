@@ -32,7 +32,19 @@ async def test_yandex_telemost_guest_join_uses_browser_prejoin() -> None:
     adapter._fill_first.assert_awaited_once()
     adapter._disable_media.assert_awaited_once()
     adapter._retry_click.assert_awaited_once()
-    adapter._dismiss_tips.assert_awaited_once()
+    assert adapter._dismiss_tips.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_dismisses_both_media_permission_tips() -> None:
+    page = SimpleNamespace(wait_for_timeout=AsyncMock())
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+    adapter._click_first = AsyncMock(side_effect=[True, True, False])
+
+    await adapter._dismiss_tips()
+
+    assert adapter._click_first.await_count == 3
+    assert page.wait_for_timeout.await_count == 2
 
 
 @pytest.mark.asyncio

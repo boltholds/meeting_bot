@@ -49,6 +49,10 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             )
 
         await self._disable_media()
+        # When Chromium has no microphone/camera permissions, Telemost can
+        # show one explanatory card for each device. They cover the join
+        # button even though it remains visible in the DOM.
+        await self._dismiss_tips()
         clicked = await self._retry_click(
             [
                 'button[data-testid="enter-conference-button"]',
@@ -136,12 +140,14 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         )
 
     async def _dismiss_tips(self) -> None:
-        await self._click_first(
-            [
-                'button:has-text("Понятно")',
-                'button:has-text("Got it")',
-            ]
-        )
+        selectors = [
+            'button:has-text("Понятно")',
+            'button:has-text("Got it")',
+        ]
+        for _ in range(4):
+            if not await self._click_first(selectors):
+                return
+            await self.page.wait_for_timeout(150)
 
     async def _in_call_controls_visible(self) -> bool:
         selectors = [
