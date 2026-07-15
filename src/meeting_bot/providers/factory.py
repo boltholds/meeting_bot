@@ -5,6 +5,7 @@ from typing import Any
 from meeting_bot.models import MeetingProvider
 from meeting_bot.providers.base import MeetingPageAdapter
 from meeting_bot.providers.google_meet import GoogleMeetAdapter
+from meeting_bot.providers.yandex_telemost import YandexTelemostAdapter
 from meeting_bot.providers.zoom import ZoomAdapter
 
 
@@ -15,4 +16,6 @@ def create_provider_adapter(
         return GoogleMeetAdapter(page, bot_name=bot_name)
     if provider == MeetingProvider.ZOOM:
         return ZoomAdapter(page, bot_name=bot_name)
+    if provider == MeetingProvider.YANDEX_TELEMOST:
+        return YandexTelemostAdapter(page, bot_name=bot_name)
     raise ValueError(f"Unsupported meeting provider: {provider}")

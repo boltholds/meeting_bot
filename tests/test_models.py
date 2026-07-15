@@ -13,6 +13,14 @@ from meeting_bot.models import (
     [
         ("https://meet.google.com/abc-defg-hij", MeetingProvider.GOOGLE_MEET),
         ("https://us05web.zoom.us/j/123", MeetingProvider.ZOOM),
+        (
+            "https://telemost.yandex.ru/j/12345678901234",
+            MeetingProvider.YANDEX_TELEMOST,
+        ),
+        (
+            "https://telemost.yandex.com/j/12345678901234?lang=en",
+            MeetingProvider.YANDEX_TELEMOST,
+        ),
     ],
 )
 def test_provider_from_url(url: str, provider: MeetingProvider) -> None:
@@ -26,6 +34,9 @@ def test_provider_from_url(url: str, provider: MeetingProvider) -> None:
         "https://meet.google.com.evil.example/abc",
         "https://user:password@meet.google.com/abc",
         "https://meet.google.com:8443/abc",
+        "https://telemost.yandex.ru/",
+        "https://telemost.yandex.ru/j/not-a-number",
+        "https://telemost.yandex.ru.evil.example/j/12345678901234",
         "https://example.com/meeting",
     ],
 )

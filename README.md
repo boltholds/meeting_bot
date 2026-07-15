@@ -1,14 +1,15 @@
 # Meeting Bot
 
-Visible audio recording bot for Google Meet and Zoom. The bot joins through a
-real Chromium session, posts a recording notice in chat, captures the browser's
-PulseAudio output, produces a crash-tolerant FLAC recording and submits it to
-Super Transcriber.
+Visible audio recording bot for Google Meet, Zoom and Yandex Telemost. The bot
+joins through a real Chromium session, posts a recording notice in chat,
+captures the browser's PulseAudio output, produces a crash-tolerant FLAC
+recording and submits it to Super Transcriber.
 
 ## Current scope
 
 - Google Meet guest join through Playwright;
 - Zoom guest join when **Join from browser** is enabled by the host;
+- Yandex Telemost guest join for `telemost.yandex.ru/j/<meeting-number>` links;
 - camera and microphone are not granted to Chromium;
 - one active browser session per container, preventing cross-meeting audio mix;
 - five-minute WAV chunks merged into 16 kHz mono FLAC;
@@ -77,6 +78,24 @@ curl -X POST http://localhost:8080/v1/meetings \
 
 Poll `GET /v1/meetings/{id}`. Stop an active recording with
 `POST /v1/meetings/{id}/stop`.
+
+For Yandex Telemost, use the same endpoint with a Telemost invitation URL:
+
+```bash
+curl -X POST http://localhost:8080/v1/meetings \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{
+    "url": "https://telemost.yandex.ru/j/12345678901234",
+    "title": "Командный созвон в Телемосте",
+    "language": "ru"
+  }'
+```
+
+Telemost does not require a Yandex account for invited guests. The adapter
+chooses **Continue in browser**, enters the visible bot name and keeps the
+microphone and camera disabled. As with the other browser adapters, selectors
+should be integration-tested against a real team meeting after UI updates.
 
 ## Consent behavior
 

@@ -1,7 +1,7 @@
 [project]
 name = "meeting-bot"
 version = "0.1.0"
-description = "Visible audio recording bot for Google Meet and Zoom"
+description = "Visible audio recording bot for Google Meet, Zoom and Yandex Telemost"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "fastapi>=0.115,<1.0",

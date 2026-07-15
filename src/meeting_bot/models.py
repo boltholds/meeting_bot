@@ -15,6 +15,7 @@ def utc_now() -> datetime:
 class MeetingProvider(StrEnum):
     GOOGLE_MEET = "google_meet"
     ZOOM = "zoom"
+    YANDEX_TELEMOST = "yandex_telemost"
 
 
 class MeetingStatus(StrEnum):
@@ -40,7 +41,21 @@ def provider_from_url(url: str) -> MeetingProvider:
         return MeetingProvider.GOOGLE_MEET
     if host == "zoom.us" or host.endswith(".zoom.us"):
         return MeetingProvider.ZOOM
-    raise ValueError("Only meet.google.com and *.zoom.us URLs are supported.")
+    if host in {"telemost.yandex.ru", "telemost.yandex.com"}:
+        meeting_id = parsed.path.removeprefix("/j/")
+        if (
+            not parsed.path.startswith("/j/")
+            or not meeting_id
+            or "/" in meeting_id
+            or not meeting_id.isdigit()
+        ):
+            raise ValueError(
+                "Yandex Telemost URL must use the /j/<meeting-number> format."
+            )
+        return MeetingProvider.YANDEX_TELEMOST
+    raise ValueError(
+        "Only meet.google.com, *.zoom.us and telemost.yandex.ru URLs are supported."
+    )
 
 
 class CreateMeetingRequest(BaseModel):
