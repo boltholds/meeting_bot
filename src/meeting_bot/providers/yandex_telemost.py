@@ -49,11 +49,7 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             )
 
         await self._disable_media()
-        # When Chromium has no microphone/camera permissions, Telemost can
-        # show one explanatory card for each device. They cover the join
-        # button even though it remains visible in the DOM.
-        await self._dismiss_tips()
-        clicked = await self._retry_click(
+        clicked = await self._retry_join(
             [
                 'button[data-testid="enter-conference-button"]',
                 'button:has-text("Подключиться")',
@@ -141,13 +137,30 @@ class YandexTelemostAdapter(MeetingPageAdapter):
 
     async def _dismiss_tips(self) -> None:
         selectors = [
-            'button:has-text("Понятно")',
-            'button:has-text("Got it")',
+            '[role="dialog"] button:has-text("Понятно")',
+            '[role="dialog"] button:has-text("Got it")',
         ]
         for _ in range(4):
-            if not await self._click_first(selectors):
+            if not await self._click_visible_tip(selectors):
                 return
             await self.page.wait_for_timeout(150)
+
+    async def _click_visible_tip(self, selectors: list[str]) -> bool:
+        for selector in selectors:
+            locator = self.page.locator(selector)
+            try:
+                count = min(await locator.count(), 8)
+            except Exception:
+                continue
+            for index in range(count):
+                candidate = locator.nth(index)
+                try:
+                    if await candidate.is_visible(timeout=300):
+                        await candidate.click()
+                        return True
+                except Exception:
+                    continue
+        return False
 
     async def _in_call_controls_visible(self) -> bool:
         selectors = [
@@ -182,6 +195,18 @@ class YandexTelemostAdapter(MeetingPageAdapter):
     async def _retry_click(self, selectors: list[str], *, timeout_seconds: int) -> bool:
         deadline = asyncio.get_running_loop().time() + timeout_seconds
         while asyncio.get_running_loop().time() < deadline:
+            if await self._click_first(selectors):
+                return True
+            await asyncio.sleep(0.5)
+        return False
+
+    async def _retry_join(self, selectors: list[str], *, timeout_seconds: int) -> bool:
+        # Permission-error dialogs are mounted asynchronously and can appear
+        # after the join button itself. Dismiss them on every attempt so an
+        # overlay cannot intercept the click.
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while asyncio.get_running_loop().time() < deadline:
+            await self._dismiss_tips()
             if await self._click_first(selectors):
                 return True
             await asyncio.sleep(0.5)

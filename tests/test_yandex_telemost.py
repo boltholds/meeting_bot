@@ -16,7 +16,7 @@ async def test_yandex_telemost_guest_join_uses_browser_prejoin() -> None:
     adapter._visible_failure = AsyncMock(return_value=None)
     adapter._fill_first = AsyncMock(return_value=True)
     adapter._disable_media = AsyncMock()
-    adapter._retry_click = AsyncMock(return_value=True)
+    adapter._retry_join = AsyncMock(return_value=True)
     adapter._in_call_controls_visible = AsyncMock(return_value=True)
     adapter._dismiss_tips = AsyncMock()
 
@@ -31,20 +31,36 @@ async def test_yandex_telemost_guest_join_uses_browser_prejoin() -> None:
     )
     adapter._fill_first.assert_awaited_once()
     adapter._disable_media.assert_awaited_once()
-    adapter._retry_click.assert_awaited_once()
-    assert adapter._dismiss_tips.await_count == 2
+    adapter._retry_join.assert_awaited_once()
+    adapter._dismiss_tips.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_yandex_telemost_dismisses_both_media_permission_tips() -> None:
     page = SimpleNamespace(wait_for_timeout=AsyncMock())
     adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
-    adapter._click_first = AsyncMock(side_effect=[True, True, False])
+    adapter._click_visible_tip = AsyncMock(side_effect=[True, True, False])
 
     await adapter._dismiss_tips()
 
-    assert adapter._click_first.await_count == 3
+    assert adapter._click_visible_tip.await_count == 3
     assert page.wait_for_timeout.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_retries_join_after_late_permission_tip() -> None:
+    adapter = YandexTelemostAdapter(SimpleNamespace(), bot_name="Recording bot")
+    adapter._dismiss_tips = AsyncMock()
+    adapter._click_first = AsyncMock(side_effect=[False, True])
+
+    clicked = await adapter._retry_join(
+        ['button[data-testid="enter-conference-button"]'],
+        timeout_seconds=2,
+    )
+
+    assert clicked is True
+    assert adapter._dismiss_tips.await_count == 2
+    assert adapter._click_first.await_count == 2
 
 
 @pytest.mark.asyncio
