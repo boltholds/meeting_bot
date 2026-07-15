@@ -88,6 +88,7 @@ class MeetingOrchestrator:
                     )
                     context = await browser.new_context(
                         permissions=[],
+                        locale="en-US",
                         viewport={"width": 1280, "height": 720},
                     )
                     page = await context.new_page()
