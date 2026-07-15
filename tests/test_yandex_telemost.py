@@ -115,7 +115,7 @@ async def test_yandex_telemost_waits_for_editor_after_opening_chat() -> None:
     adapter = YandexTelemostAdapter(SimpleNamespace(), bot_name="Recording bot")
     adapter._fill_first = AsyncMock(side_effect=[False, False, True])
     adapter._fill_messenger_frame = AsyncMock(return_value=False)
-    adapter._click_first = AsyncMock(return_value=True)
+    adapter._click_visible_chat = AsyncMock(return_value=True)
 
     filled = await adapter._open_chat_and_fill(
         ['button:has-text("Чат")'],
@@ -125,7 +125,31 @@ async def test_yandex_telemost_waits_for_editor_after_opening_chat() -> None:
     )
 
     assert filled is True
-    adapter._click_first.assert_awaited_once()
+    adapter._click_visible_chat.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_clicks_visible_chat_variant() -> None:
+    hidden = SimpleNamespace(
+        is_visible=AsyncMock(return_value=False),
+        click=AsyncMock(),
+    )
+    visible = SimpleNamespace(
+        is_visible=AsyncMock(return_value=True),
+        click=AsyncMock(),
+    )
+    matches = SimpleNamespace(
+        count=AsyncMock(return_value=2),
+        nth=lambda index: [hidden, visible][index],
+    )
+    page = SimpleNamespace(locator=lambda _selector: matches)
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+
+    clicked = await adapter._click_visible_chat(['text="Чат"'])
+
+    assert clicked is True
+    hidden.click.assert_not_awaited()
+    visible.click.assert_awaited_once()
 
 
 @pytest.mark.asyncio

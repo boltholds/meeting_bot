@@ -81,11 +81,13 @@ class YandexTelemostAdapter(MeetingPageAdapter):
 
     async def send_chat_notice(self, message: str) -> bool:
         chat_selectors = [
-            'button:has-text("Чат")',
-            'button:has-text("Chat")',
+            '[data-testid="chat-alt-button"]',
+            '[role="button"]:has-text("Чат")',
+            '[role="button"]:has-text("Chat")',
             'button[aria-label="Открыть чат"]',
             'button[aria-label="Open chat"]',
-            'button[data-testid="chat-alt-button"]',
+            'text="Чат"',
+            'text="Chat"',
         ]
         field_selectors = [
             'textarea[data-testid*="message" i]',
@@ -124,7 +126,7 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             if await self._fill_messenger_frame(field_selectors, message):
                 return True
 
-            if not await self._click_first(chat_selectors):
+            if not await self._click_visible_chat(chat_selectors):
                 await asyncio.sleep(0.5)
                 continue
 
@@ -138,6 +140,26 @@ class YandexTelemostAdapter(MeetingPageAdapter):
                 if await self._fill_messenger_frame(field_selectors, message):
                     return True
                 await asyncio.sleep(0.5)
+        return False
+
+    async def _click_visible_chat(self, selectors: list[str]) -> bool:
+        # Telemost renders several responsive toolbar variants at once. The
+        # first matching node can be hidden, and the visible "Чат" control is
+        # not consistently a <button>, so inspect every matching node.
+        for selector in selectors:
+            locator = self.page.locator(selector)
+            try:
+                count = min(await locator.count(), 12)
+            except Exception:
+                continue
+            for index in range(count):
+                candidate = locator.nth(index)
+                try:
+                    if await candidate.is_visible(timeout=300):
+                        await candidate.click()
+                        return True
+                except Exception:
+                    continue
         return False
 
     async def is_meeting_active(self) -> bool:
