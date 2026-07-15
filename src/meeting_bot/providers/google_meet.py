@@ -77,27 +77,41 @@ class GoogleMeetAdapter(MeetingPageAdapter):
         raise TimeoutError("Timed out waiting for Google Meet admission.")
 
     async def send_chat_notice(self, message: str) -> bool:
-        opened = await self._click_first(
-            [
-                'button[aria-label*="Chat"]',
-                'button[aria-label*="чат"]',
-                'button[aria-label*="messages"]',
-            ]
-        )
+        chat_button_selectors = [
+            'button[aria-label*="chat" i]',
+            'button[aria-label*="message" i]',
+            '[role="button"][aria-label*="chat" i]',
+            '[role="button"][aria-label*="message" i]',
+            'button:has-text("Chat with everyone")',
+            '[role="button"]:has-text("Chat with everyone")',
+            'button:has-text("Чат со всеми")',
+        ]
+        message_field_selectors = [
+            'textarea[aria-label*="message" i]',
+            'textarea[placeholder*="message" i]',
+            'textarea[aria-label*="сообщение" i]',
+            'textarea[placeholder*="сообщение" i]',
+            '[contenteditable="true"][aria-label*="message" i]',
+            '[contenteditable="true"][role="textbox"]',
+        ]
+
+        opened = await self._retry_click(chat_button_selectors, timeout_seconds=12)
         if not opened:
-            return False
-        filled = await self._fill_first(
-            [
-                'textarea[aria-label*="message"]',
-                'textarea[aria-label*="сообщение"]',
-                'textarea[placeholder*="message"]',
-                'textarea[placeholder*="сообщение"]',
-            ],
+            summary = await self._page_summary()
+            raise RuntimeError(f"Google Meet chat button was not found. {summary}")
+
+        filled = await self._retry_fill(
+            message_field_selectors,
             message,
+            timeout_seconds=12,
         )
         if not filled:
-            return False
+            summary = await self._page_summary()
+            raise RuntimeError(
+                f"Google Meet chat message field was not found. {summary}"
+            )
         await self.page.keyboard.press("Enter")
+        await self.page.wait_for_timeout(500)
         return True
 
     async def is_meeting_active(self) -> bool:
@@ -143,6 +157,28 @@ class GoogleMeetAdapter(MeetingPageAdapter):
             pass
         visible_text = " ".join(body.split())[:1000]
         return f"url={self.page.url!r}, title={title!r}, visible_text={visible_text!r}"
+
+    async def _retry_click(self, selectors: list[str], *, timeout_seconds: int) -> bool:
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while asyncio.get_running_loop().time() < deadline:
+            if await self._click_first(selectors):
+                return True
+            await asyncio.sleep(0.5)
+        return False
+
+    async def _retry_fill(
+        self,
+        selectors: list[str],
+        value: str,
+        *,
+        timeout_seconds: int,
+    ) -> bool:
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while asyncio.get_running_loop().time() < deadline:
+            if await self._fill_first(selectors, value):
+                return True
+            await asyncio.sleep(0.5)
+        return False
 
     async def _in_call_controls_visible(self) -> bool:
         controls = self.page.locator(
