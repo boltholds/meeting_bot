@@ -295,9 +295,9 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         return False
 
     async def _fill_messenger_frame(self, selectors: list[str], value: str) -> bool:
-        # Telemost embeds meeting chat as a cross-origin Yandex Messenger
-        # iframe. Playwright can access it through Frame locators, but normal
-        # page.locator calls do not cross the frame boundary.
+        # Telemost embeds meeting chat as a cross-origin iframe. Its URL and
+        # marker have changed between releases, so inspect every child frame;
+        # page.locator calls cannot cross that boundary.
         frame_selectors = [
             *selectors,
             "textarea",
@@ -306,18 +306,6 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         ]
         for frame in self.page.frames:
             if frame.parent_frame is None:
-                continue
-
-            frame_url = (frame.url or "").lower()
-            is_messenger = "messenger" in frame_url or "/chat" in frame_url
-            if not is_messenger:
-                try:
-                    frame_element = await frame.frame_element()
-                    marker = await frame_element.get_attribute("data-messenger-iframe")
-                    is_messenger = marker is not None
-                except Exception:
-                    pass
-            if not is_messenger:
                 continue
 
             for selector in frame_selectors:
@@ -342,4 +330,12 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         except Exception:
             pass
         visible_text = " ".join(body.split())[:1000]
-        return f"url={self.page.url!r}, title={title!r}, visible_text={visible_text!r}"
+        frame_urls = []
+        try:
+            frame_urls = [frame.url for frame in self.page.frames]
+        except Exception:
+            pass
+        return (
+            f"url={self.page.url!r}, title={title!r}, "
+            f"visible_text={visible_text!r}, frame_urls={frame_urls!r}"
+        )
