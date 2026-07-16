@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -41,6 +42,7 @@ async def test_yandex_telemost_stays_active_without_known_toolbar_label() -> Non
     page = SimpleNamespace(is_closed=lambda: False)
     adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
     adapter._visible_failure = AsyncMock(return_value=None)
+    adapter._bot_is_alone_for = AsyncMock(return_value=False)
     adapter._in_call_controls_visible = AsyncMock(return_value=False)
     adapter._prejoin_visible = AsyncMock(return_value=False)
 
@@ -54,6 +56,26 @@ async def test_yandex_telemost_stops_when_end_screen_appears() -> None:
     adapter._visible_failure = AsyncMock(return_value="Звонок завершён")
 
     assert await adapter.is_meeting_active() is False
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_stops_after_bot_is_alone() -> None:
+    page = SimpleNamespace(is_closed=lambda: False)
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+    adapter._visible_failure = AsyncMock(return_value=None)
+    adapter._bot_is_alone_for = AsyncMock(return_value=True)
+
+    assert await adapter.is_meeting_active() is False
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_detects_single_participant_after_grace_period() -> None:
+    body = SimpleNamespace(inner_text=AsyncMock(return_value="Участники 1 Чат"))
+    page = SimpleNamespace(locator=lambda _selector: body)
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+    adapter._alone_since = asyncio.get_running_loop().time() - 31
+
+    assert await adapter._bot_is_alone_for(30) is True
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 
 from meeting_bot.providers.base import MeetingPageAdapter
 
@@ -227,9 +228,33 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             return False
         if await self._visible_failure():
             return False
+        if await self._bot_is_alone_for(30):
+            logger.info("Stopping Yandex Telemost recording: bot is alone.")
+            return False
         if await self._in_call_controls_visible():
             return True
         return not await self._prejoin_visible()
+
+    async def _bot_is_alone_for(self, seconds: int) -> bool:
+        try:
+            body = await self.page.locator("body").inner_text(timeout=1000)
+        except Exception:
+            self._alone_since = None
+            return False
+
+        is_alone = bool(
+            re.search(r"(?:Участники|Participants)\s*1(?:\D|$)", body, re.IGNORECASE)
+        )
+        if not is_alone:
+            self._alone_since = None
+            return False
+
+        now = asyncio.get_running_loop().time()
+        alone_since = getattr(self, "_alone_since", None)
+        if alone_since is None:
+            self._alone_since = now
+            return False
+        return now - alone_since >= seconds
 
     async def _disable_media(self) -> None:
         # With browser permissions denied these buttons normally say "turn on"
