@@ -78,6 +78,10 @@ This avoids Google's rejection of sign-in from a Playwright-launched browser.
 GOOGLE_STORAGE_STATE=/auth/google.json
 ```
 
+Compose also defaults this value to `/auth/google.json`, so an existing
+`auth/google.json` is discovered even when the variable is omitted from
+`.env`.
+
 ```bash
 docker compose up --build --force-recreate
 ```

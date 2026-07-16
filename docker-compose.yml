@@ -32,6 +32,7 @@ services:
     environment:
       SUPER_TRANSCRIBER_URL: http://super-transcriber:8000
       SUPER_TRANSCRIBER_API_KEY: ${API_KEY}
+      GOOGLE_STORAGE_STATE: ${GOOGLE_STORAGE_STATE:-/auth/google.json}
     depends_on:
       super-transcriber:
         condition: service_healthy
