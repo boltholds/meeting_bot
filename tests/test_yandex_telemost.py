@@ -102,7 +102,7 @@ async def test_yandex_telemost_chat_notice_waits_for_controls() -> None:
 
 @pytest.mark.asyncio
 async def test_yandex_telemost_chat_notice_reports_missing_field() -> None:
-    adapter = YandexTelemostAdapter(SimpleNamespace(), bot_name="Recording bot")
+    adapter = YandexTelemostAdapter(SimpleNamespace(), bot_name="Meeting assistant")
     adapter._open_chat_and_fill = AsyncMock(return_value=False)
     adapter._page_summary = AsyncMock(return_value="visible_text='Chat unavailable'")
     adapter._chat_diagnostics = AsyncMock(return_value=[])
@@ -111,6 +111,20 @@ async def test_yandex_telemost_chat_notice_reports_missing_field() -> None:
         await adapter.send_chat_notice("Recording notice")
 
     adapter._chat_diagnostics.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_uses_visible_recording_name_as_fallback() -> None:
+    adapter = YandexTelemostAdapter(
+        SimpleNamespace(), bot_name="Super Transcriber Bot - идёт запись"
+    )
+    adapter._open_chat_and_fill = AsyncMock(return_value=False)
+    adapter._page_summary = AsyncMock(return_value="visible_text='Чат'")
+    adapter._chat_diagnostics = AsyncMock(return_value=[])
+
+    sent_or_disclosed = await adapter.send_chat_notice("Recording notice")
+
+    assert sent_or_disclosed is True
 
 
 @pytest.mark.asyncio

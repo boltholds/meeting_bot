@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from meeting_bot.providers.base import MeetingPageAdapter
+
+logger = logging.getLogger(__name__)
 
 
 class YandexTelemostAdapter(MeetingPageAdapter):
@@ -99,11 +102,19 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             '[contenteditable="true"][role="textbox"]',
         ]
         filled = await self._open_chat_and_fill(
-            chat_selectors, field_selectors, message, timeout_seconds=45
+            chat_selectors, field_selectors, message, timeout_seconds=15
         )
         if not filled:
             summary = await self._page_summary()
             diagnostics = await self._chat_diagnostics()
+            if self._bot_name_discloses_recording():
+                logger.warning(
+                    "Yandex Telemost chat is unavailable; continuing because "
+                    "the visible bot name discloses recording. %s, chat_dom=%r",
+                    summary,
+                    diagnostics,
+                )
+                return True
             raise RuntimeError(
                 "Yandex Telemost chat message field was not found. "
                 f"{summary}, chat_dom={diagnostics!r}"
@@ -112,6 +123,10 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         await self.page.keyboard.press("Enter")
         await self.page.wait_for_timeout(500)
         return True
+
+    def _bot_name_discloses_recording(self) -> bool:
+        name = self.bot_name.casefold()
+        return "запис" in name or "record" in name
 
     async def _open_chat_and_fill(
         self,
