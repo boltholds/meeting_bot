@@ -86,8 +86,8 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             '[role="button"]:has-text("Chat")',
             'button[aria-label="Открыть чат"]',
             'button[aria-label="Open chat"]',
-            'text="Чат"',
-            'text="Chat"',
+            'button:has-text("Чат")',
+            'button:has-text("Chat")',
         ]
         field_selectors = [
             'textarea[data-testid*="message" i]',
@@ -193,9 +193,16 @@ class YandexTelemostAdapter(MeetingPageAdapter):
             for index in range(count):
                 candidate = locator.nth(index)
                 try:
-                    if await candidate.is_visible(timeout=300):
-                        await candidate.click()
-                        return True
+                    if not await candidate.is_visible(timeout=300):
+                        continue
+                    if not await candidate.is_enabled(timeout=300):
+                        continue
+                    if await candidate.get_attribute("aria-disabled") == "true":
+                        continue
+                    if await candidate.get_attribute("disabled") is not None:
+                        continue
+                    await candidate.click()
+                    return True
                 except Exception:
                     continue
         return False

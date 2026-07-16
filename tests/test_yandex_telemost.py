@@ -121,7 +121,7 @@ async def test_yandex_telemost_waits_for_editor_after_opening_chat() -> None:
     adapter._click_visible_chat = AsyncMock(return_value=True)
 
     filled = await adapter._open_chat_and_fill(
-        ['button:has-text("Чат")'],
+        ['[role="button"]:has-text("Чат")'],
         ['[contenteditable="true"]'],
         "Recording notice",
         timeout_seconds=2,
@@ -139,7 +139,7 @@ async def test_yandex_telemost_does_not_toggle_chat_while_editor_loads() -> None
     adapter._click_visible_chat = AsyncMock(return_value=True)
 
     filled = await adapter._open_chat_and_fill(
-        ['text="Чат"'],
+        ['[role="button"]:has-text("Чат")'],
         ['[contenteditable="true"]'],
         "Recording notice",
         timeout_seconds=1,
@@ -153,10 +153,14 @@ async def test_yandex_telemost_does_not_toggle_chat_while_editor_loads() -> None
 async def test_yandex_telemost_clicks_visible_chat_variant() -> None:
     hidden = SimpleNamespace(
         is_visible=AsyncMock(return_value=False),
+        is_enabled=AsyncMock(return_value=True),
+        get_attribute=AsyncMock(return_value=None),
         click=AsyncMock(),
     )
     visible = SimpleNamespace(
         is_visible=AsyncMock(return_value=True),
+        is_enabled=AsyncMock(return_value=True),
+        get_attribute=AsyncMock(return_value=None),
         click=AsyncMock(),
     )
     matches = SimpleNamespace(
@@ -166,11 +170,32 @@ async def test_yandex_telemost_clicks_visible_chat_variant() -> None:
     page = SimpleNamespace(locator=lambda _selector: matches)
     adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
 
-    clicked = await adapter._click_visible_chat(['text="Чат"'])
+    clicked = await adapter._click_visible_chat(['[role="button"]:has-text("Чат")'])
 
     assert clicked is True
     hidden.click.assert_not_awaited()
     visible.click.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_yandex_telemost_ignores_disabled_chat_control() -> None:
+    disabled = SimpleNamespace(
+        is_visible=AsyncMock(return_value=True),
+        is_enabled=AsyncMock(return_value=False),
+        get_attribute=AsyncMock(return_value=None),
+        click=AsyncMock(),
+    )
+    matches = SimpleNamespace(
+        count=AsyncMock(return_value=1),
+        nth=lambda _index: disabled,
+    )
+    page = SimpleNamespace(locator=lambda _selector: matches)
+    adapter = YandexTelemostAdapter(page, bot_name="Recording bot")
+
+    clicked = await adapter._click_visible_chat(['[role="button"]:has-text("Чат")'])
+
+    assert clicked is False
+    disabled.click.assert_not_awaited()
 
 
 @pytest.mark.asyncio
