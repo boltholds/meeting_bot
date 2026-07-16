@@ -60,6 +60,29 @@ def test_dashboard_is_served(tmp_path) -> None:
     assert "Meeting Bot" in response.text
 
 
+def test_auth_status_detects_google_storage_state(tmp_path) -> None:
+    auth_file = tmp_path / "google.json"
+    auth_file.write_text(
+        '{"cookies":[{"name":"SID","domain":".google.com","expires":-1}]}',
+        encoding="utf-8",
+    )
+    app = create_app(
+        settings=Settings(
+            api_key="secret",
+            data_dir=tmp_path,
+            google_storage_state=str(auth_file),
+        ),
+        store=InMemoryMeetingStore(),
+        orchestrator=FakeOrchestrator(),
+    )
+
+    response = TestClient(app).get("/v1/auth/status", headers={"X-API-Key": "secret"})
+
+    assert response.status_code == 200
+    assert response.json()["google_meet"]["connected"] is True
+    assert response.json()["zoom"]["required"] is False
+
+
 def test_create_meeting_rejects_inverted_speaker_bounds(tmp_path) -> None:
     app = create_app(
         settings=Settings(data_dir=tmp_path),

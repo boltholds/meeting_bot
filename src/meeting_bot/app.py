@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import time
 from pathlib import Path
 from secrets import compare_digest
 
@@ -53,6 +55,44 @@ def create_app(
     )
     def list_meetings() -> list[MeetingSession]:
         return meeting_store.list()
+
+    @app.get(
+        "/v1/auth/status",
+        dependencies=[Depends(require_api_key)],
+    )
+    def auth_status() -> dict[str, dict[str, object]]:
+        google_path = (
+            Path(config.google_storage_state) if config.google_storage_state else None
+        )
+        google_connected = False
+        if google_path and google_path.is_file():
+            try:
+                state = json.loads(google_path.read_text(encoding="utf-8"))
+                google_connected = any(
+                    cookie.get("name")
+                    in {"SID", "SAPISID", "__Secure-1PSID", "__Secure-3PSID"}
+                    and str(cookie.get("domain", "")).endswith("google.com")
+                    and (
+                        cookie.get("expires", -1) == -1
+                        or float(cookie.get("expires", 0)) > time.time()
+                    )
+                    for cookie in state.get("cookies", [])
+                )
+            except (OSError, ValueError, TypeError):
+                google_connected = False
+        return {
+            "google_meet": {
+                "required": True,
+                "connected": google_connected,
+                "configured": bool(google_path),
+            },
+            "zoom": {"required": False, "connected": True, "configured": True},
+            "yandex_telemost": {
+                "required": False,
+                "connected": True,
+                "configured": True,
+            },
+        }
 
     @app.post(
         "/v1/meetings",

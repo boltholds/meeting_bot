@@ -27,6 +27,10 @@
           <input id="meetingUrl" type="url" required autocomplete="off" placeholder="https://meet.google.com/…">
           <span id="providerBadge" class="provider-badge">AUTO</span>
         </div>
+        <div id="authPanel" class="auth-panel" hidden>
+          <div><i></i><span id="authText"></span></div>
+          <button id="authButton" type="button">Авторизовать</button>
+        </div>
         <div class="form-grid">
           <label>Название<input id="title" maxlength="200" placeholder="Командный созвон"></label>
           <label>Язык<select id="language"><option value="ru">Русский</option><option value="en">English</option></select></label>
@@ -51,6 +55,18 @@
       <button class="stop-button">Остановить</button>
     </article>
   </template>
+  <dialog id="authDialog">
+    <button id="closeAuth" class="dialog-close" type="button">×</button>
+    <p class="eyebrow">BOT ACCOUNT</p>
+    <h2>Авторизация Google Meet</h2>
+    <p>Команда откроет обычный Chrome с отдельным профилем бота. Войдите в аккаунт, затем подтвердите сохранение сессии в PowerShell.</p>
+    <pre><code>docker compose down
+uv sync
+uv run meeting-bot-auth-google --output auth/google.json --channel chrome
+docker compose up --build --force-recreate</code></pre>
+    <div class="dialog-actions"><button id="copyAuth" class="secondary" type="button">Копировать команды</button><button id="checkAuth" class="primary compact" type="button">Проверить подключение</button></div>
+    <p id="authResult" class="auth-result"></p>
+  </dialog>
   <script src="/static/app.js" defer></script>
 </body>
 </html>
