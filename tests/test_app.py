@@ -42,6 +42,23 @@ def test_create_meeting_requires_key_and_starts_bot(tmp_path) -> None:
     assert response.json()["provider"] == "google_meet"
     assert len(orchestrator.started) == 1
 
+    meetings = client.get("/v1/meetings", headers={"X-API-Key": "secret"})
+    assert meetings.status_code == 200
+    assert meetings.json()[0]["provider"] == "google_meet"
+
+
+def test_dashboard_is_served(tmp_path) -> None:
+    app = create_app(
+        settings=Settings(data_dir=tmp_path),
+        store=InMemoryMeetingStore(),
+        orchestrator=FakeOrchestrator(),
+    )
+
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    assert "Meeting Bot" in response.text
+
 
 def test_create_meeting_rejects_inverted_speaker_bounds(tmp_path) -> None:
     app = create_app(

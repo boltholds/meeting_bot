@@ -30,6 +30,11 @@ platforms change their UI and can show account-specific consent screens.
 docker compose up --build
 ```
 
+Open `http://localhost:8080` for the web console. Paste a Google Meet, Zoom or
+Yandex Telemost invitation URL, enter the API key from `.env`, and use the live
+session list to monitor or stop the bot. The key is kept in browser
+`sessionStorage` and is cleared when the browser session ends.
+
 ### Google bot account
 
 Google Meet can reject anonymous third-party bots before they can ask to join.

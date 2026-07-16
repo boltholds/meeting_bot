@@ -24,6 +24,15 @@ class InMemoryMeetingStore:
             session = self._require(meeting_id)
             return session.model_copy(deep=True)
 
+    def list(self) -> list[MeetingSession]:
+        with self._lock:
+            sessions = sorted(
+                self._meetings.values(),
+                key=lambda session: session.created_at,
+                reverse=True,
+            )
+            return [session.model_copy(deep=True) for session in sessions]
+
     def update_status(
         self,
         meeting_id: str,

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from secrets import compare_digest
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from meeting_bot.models import (
     CreateMeetingRequest,
@@ -27,6 +30,8 @@ def create_app(
         settings=config, store=meeting_store
     )
     app = FastAPI(title="Meeting Bot API", version="0.1.0")
+    static_dir = Path(__file__).with_name("static")
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
         valid = bool(x_api_key) and compare_digest(x_api_key or "", config.api_key)
@@ -36,6 +41,18 @@ def create_app(
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/", include_in_schema=False)
+    def dashboard() -> FileResponse:
+        return FileResponse(static_dir / "index.html")
+
+    @app.get(
+        "/v1/meetings",
+        response_model=list[MeetingSession],
+        dependencies=[Depends(require_api_key)],
+    )
+    def list_meetings() -> list[MeetingSession]:
+        return meeting_store.list()
 
     @app.post(
         "/v1/meetings",

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Meeting Bot Console</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="noise"></div>
+  <main class="shell">
+    <header>
+      <div class="brand-mark">ST</div>
+      <div><p class="eyebrow">SUPER TRANSCRIBER</p><h1>Meeting Bot</h1></div>
+      <div id="serviceState" class="service-state"><i></i> SERVICE ONLINE</div>
+    </header>
+
+    <section class="hero panel">
+      <div class="hero-copy">
+        <p class="eyebrow">NEW RECORDING SESSION</p>
+        <h2>Подключите бота<br>к вашей встрече</h2>
+        <p>Вставьте ссылку — платформа определится автоматически.</p>
+      </div>
+      <form id="meetingForm">
+        <label for="meetingUrl">Ссылка на встречу</label>
+        <div class="url-row">
+          <input id="meetingUrl" type="url" required autocomplete="off" placeholder="https://meet.google.com/…">
+          <span id="providerBadge" class="provider-badge">AUTO</span>
+        </div>
+        <div class="form-grid">
+          <label>Название<input id="title" maxlength="200" placeholder="Командный созвон"></label>
+          <label>Язык<select id="language"><option value="ru">Русский</option><option value="en">English</option></select></label>
+          <label>Мин. спикеров<input id="minSpeakers" type="number" min="1" max="50" value="1"></label>
+          <label>Макс. спикеров<input id="maxSpeakers" type="number" min="1" max="50" value="10"></label>
+        </div>
+        <label class="key-label">API key<input id="apiKey" type="password" required placeholder="X-API-Key"></label>
+        <div id="formError" class="form-error" role="alert"></div>
+        <button class="primary" type="submit"><span>Запустить бота</span><b>→</b></button>
+      </form>
+    </section>
+
+    <section class="sessions">
+      <div class="section-head"><div><p class="eyebrow">LIVE OPERATIONS</p><h2>Сессии</h2></div><button id="refresh" class="icon-button" title="Обновить">↻</button></div>
+      <div id="sessionList" class="session-list"><div class="empty">Введите API key, чтобы увидеть сессии.</div></div>
+    </section>
+  </main>
+  <template id="sessionTemplate">
+    <article class="session-card">
+      <div class="provider-icon"></div>
+      <div class="session-main"><div class="session-title-row"><h3></h3><span class="status"></span></div><a class="meeting-link" target="_blank" rel="noreferrer"></a><div class="meta"></div><p class="error"></p></div>
+      <button class="stop-button">Остановить</button>
+    </article>
+  </template>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
