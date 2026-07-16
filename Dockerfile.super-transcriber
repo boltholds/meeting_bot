@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+ARG SUPER_TRANSCRIBER_REPOSITORY=https://github.com/boltholds/super_transcriber.git
+ARG SUPER_TRANSCRIBER_REF=31bf4a6f4ba4c186c91685473cf88d85e5cbc11f
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        git \
+        libglib2.0-0 \
+        libgl1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install "poetry>=2.2,<3"
+
+WORKDIR /app
+RUN git clone --filter=blob:none "${SUPER_TRANSCRIBER_REPOSITORY}" . \
+    && git checkout "${SUPER_TRANSCRIBER_REF}" \
+    && poetry install --only main --no-interaction --no-ansi \
+    && git remote remove origin
+
+RUN mkdir -p /data/api /root/.cache/huggingface
+
+EXPOSE 8000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=12 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)" || exit 1
+
+CMD ["uvicorn", "super_transcriber.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

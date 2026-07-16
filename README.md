@@ -22,13 +22,24 @@ platforms change their UI and can show account-specific consent screens.
 
 ## Run
 
-1. Copy `.env.example` to `.env` and set both API keys.
-2. Make sure `SUPER_TRANSCRIBER_URL` is reachable from the container.
-3. Start the bot:
+1. Copy `.env.example` to `.env`, set `API_KEY` and `HF_TOKEN`.
+2. Start Ollama on the host and make sure the model from `LLM_MODEL` is pulled.
+3. Build and start the complete stack:
 
 ```bash
 docker compose up --build
 ```
+
+Compose builds two isolated services from one configuration:
+
+- `meeting-bot` — Chromium meeting participant and web console on port 8080;
+- `super-transcriber` — GPU-backed WhisperX API on the internal port 8000.
+
+The Super Transcriber source is downloaded during its image build and pinned by
+`SUPER_TRANSCRIBER_REF`. Both APIs use the same `API_KEY`, and both services
+read the same `.env`. Models and transcription artifacts are kept in named
+Docker volumes, so rebuilding images does not download models again or delete
+results. On Windows, Ollama is reached through `host.docker.internal`.
 
 Open `http://localhost:8080` for the web console. Paste a Google Meet, Zoom or
 Yandex Telemost invitation URL, enter the API key from `.env`, and use the live

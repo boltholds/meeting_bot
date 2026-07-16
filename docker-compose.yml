@@ -1,7 +1,33 @@
 services:
+  super-transcriber:
+    build:
+      context: .
+      dockerfile: Dockerfile.super-transcriber
+      args:
+        SUPER_TRANSCRIBER_REF: ${SUPER_TRANSCRIBER_REF:-31bf4a6f4ba4c186c91685473cf88d85e5cbc11f}
+    env_file: .env
+    environment:
+      API_KEY: ${API_KEY}
+      API_DATA_DIR: /data/api
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+    volumes:
+      - transcription-data:/data
+      - huggingface-cache:/root/.cache/huggingface
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    gpus: all
+    shm_size: 4gb
+    restart: unless-stopped
+
   meeting-bot:
     build: .
     env_file: .env
+    environment:
+      SUPER_TRANSCRIBER_URL: http://super-transcriber:8000
+      SUPER_TRANSCRIBER_API_KEY: ${API_KEY}
+    depends_on:
+      super-transcriber:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
@@ -13,3 +39,5 @@ services:
 
 volumes:
   meeting-audio:
+  transcription-data:
+  huggingface-cache:
