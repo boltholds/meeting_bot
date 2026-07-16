@@ -1,5 +1,7 @@
 # Meeting Bot
 
+See [BACKLOG.md](BACKLOG.md) for planned product work.
+
 Visible audio recording bot for Google Meet, Zoom and Yandex Telemost. The bot
 joins through a real Chromium session, posts a recording notice in chat,
 captures the browser's PulseAudio output, produces a crash-tolerant FLAC
