@@ -103,8 +103,10 @@ class YandexTelemostAdapter(MeetingPageAdapter):
         )
         if not filled:
             summary = await self._page_summary()
+            diagnostics = await self._chat_diagnostics()
             raise RuntimeError(
-                f"Yandex Telemost chat message field was not found. {summary}"
+                "Yandex Telemost chat message field was not found. "
+                f"{summary}, chat_dom={diagnostics!r}"
             )
 
         await self.page.keyboard.press("Enter")
@@ -142,6 +144,41 @@ class YandexTelemostAdapter(MeetingPageAdapter):
                 await asyncio.sleep(0.5)
             return False
         return False
+
+    async def _chat_diagnostics(self) -> list[dict[str, object]]:
+        script = """
+            () => ({
+                readyState: document.readyState,
+                bodyClass: document.body?.className || '',
+                bodyChildren: document.body?.childElementCount || 0,
+                controls: Array.from(document.querySelectorAll(
+                    'textarea, input, [contenteditable], [role="textbox"]'
+                )).slice(0, 20).map((element) => {
+                    const rect = element.getBoundingClientRect();
+                    return {
+                        tag: element.tagName,
+                        type: element.getAttribute('type'),
+                        class: String(element.className || '').slice(0, 200),
+                        role: element.getAttribute('role'),
+                        editable: element.getAttribute('contenteditable'),
+                        aria: element.getAttribute('aria-label'),
+                        placeholder: element.getAttribute('placeholder'),
+                        width: Math.round(rect.width),
+                        height: Math.round(rect.height),
+                    };
+                }),
+            })
+        """
+        diagnostics: list[dict[str, object]] = []
+        for frame in self.page.frames:
+            try:
+                state = await frame.evaluate(script)
+                diagnostics.append({"url": frame.url, **state})
+            except Exception as exc:
+                diagnostics.append(
+                    {"url": getattr(frame, "url", ""), "error": type(exc).__name__}
+                )
+        return diagnostics
 
     async def _click_visible_chat(self, selectors: list[str]) -> bool:
         # Telemost renders several responsive toolbar variants at once. The
