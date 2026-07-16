@@ -46,6 +46,10 @@ Yandex Telemost invitation URL, enter the API key from `.env`, and use the live
 session list to monitor or stop the bot. The key is kept in browser
 `sessionStorage` and is cleared when the browser session ends.
 
+Set `MEETING_BOT_PORT=8001` in `.env` to expose the same console at
+`http://localhost:8001`. The container always listens on port 8080; this setting
+changes only the Windows host port.
+
 When a Google Meet URL is detected, the console shows the bot account status
 and an **Authorize** helper with the exact host commands. Zoom and Yandex
 Telemost are marked as guest providers and do not require an account.
