@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir . \
     && mkdir -p /ms-playwright \
     && playwright install --with-deps chromium \
     && useradd --create-home --uid 10001 appuser \
-    && mkdir -p /data /tmp/runtime-appuser \
+    && mkdir -p /data /tmp/runtime-appuser /tmp/.X11-unix \
+    && chmod 1777 /tmp/.X11-unix \
     && chmod 700 /tmp/runtime-appuser \
     && chmod -R a+rX /ms-playwright \
     && chown -R appuser:appuser /app /data /tmp/runtime-appuser
